@@ -17,7 +17,7 @@ def categorical_data_to_numerical_encoding(df_cat):
     print(encoded_data_cat[0])
 
     # Specifying the categorical columns to be encoded
-    categorical_columns = ['Gene_ID', 'Gene_Symbol', 'REM_ID', 'Chr', 'Predicted_function', 'CREM_ID']
+    categorical_columns = df_cat.columns[[0, 1, 2, 3, 4]]
 
     # Creating a new DataFrame 'encoded_df' with the encoded data and column names
     encoded_df_cat = pd.DataFrame(encoded_data_cat, columns=encoder.get_feature_names_out(categorical_columns))
@@ -73,22 +73,14 @@ def preprocessing():
         df.drop_duplicates(inplace=True)
         df = df.set_index("REM_ID")
 
-        y = df['Predicted_function']  # label vector 0=No Attack, 1=Attack
-        # y_cat = df['attack_cat']  # Label vector with attack categories or "Normal" for no attack
-        X = df.drop(columns=['Predicted_function'])  # Dataset without labels
+        y = df['Predicted_function']  # label vector
+        X = df.drop(columns=['Predicted_function'], axis=1)  # Dataset without labels
 
         # Creating a DataFrame 'df_cat' containing only the categorical attributes
         df_cat = X.select_dtypes(exclude=["number"])  # Categorical attributes only
 
         # Creating a list 'df_num' of column names for the numeric attributes
         df_num = X.select_dtypes(include=["number"]).columns.tolist()  # Numeric attributes only
-
-        # Print all Attack Categories
-        """    all_cat = []
-        for i in y_cat:
-            if i not in all_cat:
-                print(i)
-                all_cat.append(i)"""
 
         data_array = df_to_normalized_ndarray(df_num, df)
         encoded_data_cat = categorical_data_to_numerical_encoding(df_cat)
@@ -107,6 +99,11 @@ def preprocessing():
         # result_data.append(y_cat)
         # result_data.append(all_cat)
         preprocessed_data.append(result_data)
+
+    with open("preprocessedData.txt", "w") as output:
+        for row in preprocessed_data:
+            s = " ".join(map(str, row))
+            output.write(s + '\n')
 
     return preprocessed_data
 
