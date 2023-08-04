@@ -1,5 +1,4 @@
-import numpy as np  # Numerical computing library
-# Importing Package to run CCA Algorithm
+import numpy as np
 import random as rd
 import preprocessing
 import argparse
@@ -9,12 +8,11 @@ from iofile import _biclustering_to_dict
 
 def logarithmic_transformation(data_test):
     # Do Logaritmic transformations on dataset that are suggested in the paper
-    falttened_list  = data_test.flatten()
-    for i in range(len(falttened_list)):
-        if falttened_list[i] > 0:
-            falttened_list[i] = np.log10((falttened_list[i] * (10 ** 5)) * 100)
+    nonzero_mask = data_test != 0
+    data_test_log_norm = np.zeros_like(data_test)
+    data_test_log_norm[nonzero_mask] = np.log10(data_test[nonzero_mask] * (10 ** 5)) * 100
 
-    return data_test
+    return data_test_log_norm
 
 
 def get_sample(data_test, y_cat, sample_size=None):
@@ -35,11 +33,10 @@ def get_sample(data_test, y_cat, sample_size=None):
 
 def get_distribution_of_sample(sample_labels):
 
-    labels = {"Normal": [], "Reconnaissance": [], "Backdoor": [], "DoS": [], "Exploits": [],
-              "Analysis": [], "Fuzzers": [], "Worms": [], "Shellcode": [], "Generic": []}
+    labels = {"activating": [], "repressing": []}
 
     for label in labels:
-        count = sample_labels["attack_cat"].value_counts().get(label, 0)
+        count = sample_labels["Predicted_function"].value_counts().get(label, 0)
         labels[label] = count
 
 
@@ -53,14 +50,12 @@ def run_cca(sample_data):
     min_value = np.min(sample_data)
     max_value = np.max(sample_data)
 
-    # msr_thr = (((max_value - min_value) ** 2) / 12) * 0.005
-    msr_thr = 400
+    msr_thr = (((max_value - min_value) ** 2) / 12) * 0.005
     print("The used threshold for the msr is:", msr_thr)
 
     print("Initializing CCA")
 
     # creating an instance of the ChengChurchAlgorithm class and running with the parameters of the original study
-    # cca = ChengChurchAlgorithm(num_biclusters=10, msr_threshold=300.0, multiple_node_deletion_threshold=1.2)
     cca = ChengChurchAlgorithm(num_biclusters=100)
 
     print("Starting Algorithm")
@@ -79,12 +74,9 @@ def format_cca_results(biclustering_test, all_cat, sample_labels):
             bicluster_values[cat] = 0
 
         for row in bicluster[0]:
-            bicluster_values[sample_labels.loc[row]["attack_cat"]] += 1
+            bicluster_values[sample_labels.loc[row]["Predicted_function"]] += 1
 
         results.append(bicluster_values)
-
-    for result in results:
-        print(result)
 
     return results
 
@@ -114,8 +106,6 @@ def calc_multi_classification(results):
 
     accuracy = precision_numerator / precision_denominator
 
-    # print(information)
-    print(max_keys)
     print("Accuracy Multiclassification:", accuracy)
 
     return accuracy
@@ -152,16 +142,18 @@ def calculate_binary_classification(results):
 def main(sample_size=None):
 
     data = preprocessing.preprocessing()
-    data = np.asarray(data[0][0])
-    data = logarithmic_transformation(data)
-    biclustering_test = run_cca(data)
-    print(biclustering_test)
+    test_data = data[0][0]
+    y_cat_test = data[0][1]
+    all_cat_test = data[0][2]
 
+    test_data = logarithmic_transformation(test_data)
+    sample_data, sample_labels = get_sample(test_data, y_cat_test, sample_size=sample_size)
+    get_distribution_of_sample(sample_labels)
+    biclustering_test = run_cca(test_data)
+    results = format_cca_results(biclustering_test, all_cat_test, sample_labels)
 
-    # mult_acc = calc_multi_classification(biclustering_test)
-    # bin_acc = calculate_binary_classification(biclustering_test)
-    # print("Accuracy Multi Average:", mult_acc_av/10)
-    # print("Accuracy binary Average:", bin_acc_av/10)
+    mult_acc = calc_multi_classification(results)
+    bin_acc = calculate_binary_classification(results)
 
 
 if __name__ == '__main__':
@@ -170,4 +162,4 @@ if __name__ == '__main__':
     parser.add_argument("sample_size", type=int, nargs='?', default=None, help="Sample size for CCA")
     args = parser.parse_args()
 
-    main(sample_size=args.sample_size)
+    main(sample_size=None)

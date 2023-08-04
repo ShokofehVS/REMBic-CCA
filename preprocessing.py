@@ -73,14 +73,27 @@ def preprocessing():
         df.drop_duplicates(inplace=True)
         df = df.set_index("REM_ID")
 
+        with open('CCA_preprocessing.out', 'w') as saveFile:
+            saveFile.write("Successful Run")
+            saveFile.write("\n")
+            saveFile.write(str(df.columns.values))
+            saveFile.write(str(df))
+
         y = df['Predicted_function']  # label vector
         X = df.drop(columns=['Predicted_function'], axis=1)  # Dataset without labels
-
+        y_cat = df['Predicted_function']
         # Creating a DataFrame 'df_cat' containing only the categorical attributes
         df_cat = X.select_dtypes(exclude=["number"])  # Categorical attributes only
 
         # Creating a list 'df_num' of column names for the numeric attributes
         df_num = X.select_dtypes(include=["number"]).columns.tolist()  # Numeric attributes only
+
+        # Print all Attack Categories
+        all_cat = []
+        for i in y_cat:
+            if i not in all_cat:
+                # print(i)
+                all_cat.append(i)
 
         data_array = df_to_normalized_ndarray(df_num, df)
         encoded_data_cat = categorical_data_to_numerical_encoding(df_cat)
@@ -96,8 +109,8 @@ def preprocessing():
         print("First row of concatenated data:", concatenated_data[0])
 
         result_data.append(concatenated_data)
-        # result_data.append(y_cat)
-        # result_data.append(all_cat)
+        result_data.append(y_cat)
+        result_data.append(all_cat)
         preprocessed_data.append(result_data)
 
     with open("preprocessedData.txt", "w") as output:
