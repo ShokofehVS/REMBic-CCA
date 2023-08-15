@@ -87,6 +87,64 @@ def enrichment_analysis(self, library, output):
                          outdir=output)
     return (res.results)
 
+# Evaluating data having labels
+def calc_multi_classification(results):
+    information = {}
+
+    precision_numerator = 0
+    precision_denominator = 0
+    max_keys = set()
+
+    for i, result in enumerate(results):
+        max_key = max(result, key=result.get)
+        max_keys.add(max_key)
+        max_value = result[max_key]
+        sum_values = sum(result.values())
+        percent = (max_value / sum_values) * 100
+
+        information[f"Bicluster {i + 1}"] = {
+            "Sum": sum_values,
+            "Max Key": max_key,
+            "Percentage": percent
+        }
+
+        precision_numerator += result[max_key]
+        precision_denominator += sum_values
+
+    accuracy = precision_numerator / precision_denominator
+
+    print("Accuracy Multiclassification:", accuracy)
+
+    return accuracy
+
+# Evaluating data having labels
+def calculate_binary_classification(results):
+    binary_results = []
+
+    for result in results:
+        binary_result = {
+            "Normal": result.get("Normal", 0),
+            "Attack": sum(value for key, value in result.items() if key != "Normal")
+        }
+        binary_results.append(binary_result)
+
+    precision_numerator_binary = 0
+    precision_denominator_binary = 0
+
+    for j, binary_result in enumerate(binary_results):
+        max_key_binary = max(binary_result, key=binary_result.get)
+        max_value_binary = binary_result[max_key_binary]
+        sum_values_binary = sum(binary_result.values())
+
+        precision_numerator_binary += binary_result[max_key_binary]
+        precision_denominator_binary += sum_values_binary
+
+    accuracy_binary = precision_numerator_binary / precision_denominator_binary
+
+    print("Accuracy binary:", accuracy_binary)
+
+    return accuracy_binary
+
 # The rest of metrics are direct implementations from https://padilha.github.io/bracis-2018-suppl/
 # Variance (VAR)
 def var(bicluster_data):
