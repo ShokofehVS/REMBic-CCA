@@ -42,7 +42,6 @@ def get_distribution_of_sample(sample_labels):
 
 def run_cca(sample_data):
     # Run CCA on the sample data
-
     # missing value imputation suggested by Cheng and Church
     missing_sample = np.where(sample_data < 0.0)
     sample_data[missing_sample] = np.random.randint(low=0, high=800, size=len(missing_sample[0]))
@@ -68,7 +67,8 @@ def run_cca(sample_data):
 def format_cca_results(biclustering_test, all_cat, sample_labels):
     biclusters_as_dict = _biclustering_to_dict(biclustering_test)
     results = []
-    for bicluster in biclusters_as_dict["biclusters"]:
+    # Evaluating data having labels
+    """for bicluster in biclusters_as_dict["biclusters"]:
         bicluster_values = {}
         for cat in all_cat:
             bicluster_values[cat] = 0
@@ -76,84 +76,40 @@ def format_cca_results(biclustering_test, all_cat, sample_labels):
         for row in bicluster[0]:
             bicluster_values[sample_labels.loc[row]["Predicted_function"]] += 1
 
-        results.append(bicluster_values)
+        results.append(bicluster_values)"""
+
+    # Evaluating data with coherence measures
+    for bicluster in biclusters_as_dict["biclusters"]:
+        # np.array(bicluster)
+        results.append(np.array(bicluster[0]))
+        results.append(np.array(bicluster[1]))
+
 
     return results
 
-
-def calc_multi_classification(results):
-    information = {}
-
-    precision_numerator = 0
-    precision_denominator = 0
-    max_keys = set()
-
-    for i, result in enumerate(results):
-        max_key = max(result, key=result.get)
-        max_keys.add(max_key)
-        max_value = result[max_key]
-        sum_values = sum(result.values())
-        percent = (max_value / sum_values) * 100
-
-        information[f"Bicluster {i + 1}"] = {
-            "Sum": sum_values,
-            "Max Key": max_key,
-            "Percentage": percent
-        }
-
-        precision_numerator += result[max_key]
-        precision_denominator += sum_values
-
-    accuracy = precision_numerator / precision_denominator
-
-    print("Accuracy Multiclassification:", accuracy)
-
-    return accuracy
-
-
-def calculate_binary_classification(results):
-    binary_results = []
-
-    for result in results:
-        binary_result = {
-            "Normal": result.get("Normal", 0),
-            "Attack": sum(value for key, value in result.items() if key != "Normal")
-        }
-        binary_results.append(binary_result)
-
-    precision_numerator_binary = 0
-    precision_denominator_binary = 0
-
-    for j, binary_result in enumerate(binary_results):
-        max_key_binary = max(binary_result, key=binary_result.get)
-        max_value_binary = binary_result[max_key_binary]
-        sum_values_binary = sum(binary_result.values())
-
-        precision_numerator_binary += binary_result[max_key_binary]
-        precision_denominator_binary += sum_values_binary
-
-    accuracy_binary = precision_numerator_binary / precision_denominator_binary
-
-    print("Accuracy binary:", accuracy_binary)
-
-    return accuracy_binary
-
-
 def main(sample_size=None):
-
+    # Preprocessing EpiRego dataset
     data = preprocessing.preprocessing()
+
+    # Getting data as a source, label and all categorical data
     test_data = data[0][0]
     y_cat_test = data[0][1]
     all_cat_test = data[0][2]
 
+    # Do transformation according to CCA original paper
     test_data = logarithmic_transformation(test_data)
-    sample_data, sample_labels = get_sample(test_data, y_cat_test, sample_size=sample_size)
-    get_distribution_of_sample(sample_labels)
-    biclustering_test = run_cca(test_data)
-    results = format_cca_results(biclustering_test, all_cat_test, sample_labels)
 
-    mult_acc = calc_multi_classification(results)
-    bin_acc = calculate_binary_classification(results)
+    # Get part of data for large datasets
+    sample_data, sample_labels = get_sample(test_data, y_cat_test, sample_size=sample_size)
+
+    # Distribution of data according to label
+    get_distribution_of_sample(sample_labels)
+
+    # Run CCA algorithm
+    biclustering_test = run_cca(test_data)
+
+    # Format the resulting biclusters
+    results = format_cca_results(biclustering_test, all_cat_test, sample_labels)
 
 
 if __name__ == '__main__':
