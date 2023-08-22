@@ -47,7 +47,7 @@ def _biclustering_to_dict(bic):
 
 def _dict_to_biclustering(bic_dict):
     try:
-        biclust =  Biclustering([Bicluster(np.array(rows, np.int), np.array(cols, np.int), np.array(data, np.double)) for rows, cols, data in bic_dict['biclusters']])
+        biclust =  Biclustering([Bicluster(np.array(rows, int), np.array(cols, int), np.array(data, np.double)) for rows, cols, data in bic_dict['biclusters']])
     except ValueError:
-        biclust =  Biclustering([Bicluster(np.array(rows, np.int), np.array(cols, np.int)) for rows, cols in bic_dict['biclusters']])
+        biclust =  Biclustering([Bicluster(np.array(rows, int), np.array(cols, int)) for rows, cols in bic_dict['biclusters']])
     return biclust
