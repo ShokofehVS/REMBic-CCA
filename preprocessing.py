@@ -4,59 +4,40 @@ from sklearn.preprocessing import MinMaxScaler, OneHotEncoder  # Preprocessing t
 
 
 def categorical_data_to_numerical_encoding(df_cat):
-    # 5--> Encoding categorical variables
-
-    # Creating an instance of the OneHotEncoder with sparse=False to obtain a dense array
+    # Encode categorical variables
+    # Create an instance of the OneHotEncoder with sparse=False to obtain a dense array
     encoder = OneHotEncoder(sparse=False)
     encoded_data_cat = encoder.fit_transform(df_cat)
 
-    # Printing the head (first few rows) of the df_cat DataFrame
-    print(df_cat.head())
-
-    # Printing the encoded representation of the first row of the categorical data
-    print(encoded_data_cat[0])
-
-    # Specifying the categorical columns to be encoded
+    # Specify the categorical columns to be encoded
     categorical_columns = df_cat.columns[[0, 1, 2, 3, 4]]
 
-    # Creating a new DataFrame 'encoded_df' with the encoded data and column names
+    # Create a new DataFrame 'encoded_df' with the encoded data and column names
     encoded_df_cat = pd.DataFrame(encoded_data_cat, columns=encoder.get_feature_names_out(categorical_columns))
     encoded_df_cat.head()
 
     return encoded_data_cat
 
 def df_to_normalized_ndarray(df_num, df):
-    # 3--> Normalizing numerical columns
-
-    # Creating an instance of the MinMaxScaler for normalization
+    # Normalize numerical columns
+    # Create an instance of the MinMaxScaler for normalization
     scaler = MinMaxScaler()
 
-    # Creating an empty DataFrame to store the normalized numerical columns
+    # Create an empty DataFrame to store the normalized numerical columns
     normalized_numerical = pd.DataFrame()
 
-    # Iterating over each numerical column
+    # Iterate over each numerical column
     for column in df_num:
         try:
-            # Normalizing the column values using the scaler and flattening the result
+            # Normalize the column values using the scaler and flattening the result
             normalized_column = scaler.fit_transform(df[[column]])
             normalized_numerical[column] = normalized_column.flatten()
         except ValueError:
-            # Skipping the column if it contains non-numeric values
+            # Skip the column if it contains non-numeric values
             print(f"Skipping column {column} due to non-numeric values.")
 
-    # Displaying the head of the normalized_numerical DataFrame
-    normalized_numerical.head()
-
-    # 4--> Converting remaining data to a numerical array
-
-    # Converting the normalized_numerical DataFrame to a numerical array
+    # Convert the normalized_numerical DataFrame to a numerical array
     data_array = np.array(normalized_numerical)
-
-    # Printing the shape (dimensions) of the data array
-    print(data_array.shape)
-
-    # Accessing and printing the first row of the data array
-    print(data_array[0])
 
     return data_array
 
@@ -67,54 +48,70 @@ def preprocessing():
     for path in dataset_paths:
         result_data = []
 
-        # 2--> Loading data and preparing the dataset
-        # Loading the dataset from a CSV file into a pandas DataFrame
+        # Load data and preparing the dataset
+        # Load data from a CSV file into a pandas DataFrame
         df = pd.read_csv(path)
         df.drop_duplicates(inplace=True)
+        if "Unnamed: 0" in df.columns.values:
+            df.rename(columns={'Unnamed: 0': 'id'}, inplace=True)
+
+        # Dataframe
         df = df.set_index("REM_ID")
 
-        with open('CCA_preprocessing.out', 'w') as saveFile:
-            saveFile.write("Successful Run")
-            saveFile.write("\n")
-            saveFile.write(str(df.columns.values))
-            saveFile.write(str(df))
+        # Label vector
+        df_lbl = df['Predicted_function']                           #(('REM0639547', 'activating')...
 
-        y = df['Predicted_function']  # label vector
-        X = df.drop(columns=['Predicted_function'], axis=1)  # Dataset without labels
-        y_cat = df['Predicted_function']
-        # Creating a DataFrame 'df_cat' containing only the categorical attributes
-        df_cat = X.select_dtypes(exclude=["number"])  # Categorical attributes only
+        # Dataset without labels
+        df_nlbl = df.drop(columns=['Predicted_function'], axis=1)
 
-        # Creating a list 'df_num' of column names for the numeric attributes
-        df_num = X.select_dtypes(include=["number"]).columns.tolist()  # Numeric attributes only
+        # Creating a DataFrame df_cat containing only the categorical attributes
+        df_cat = df_nlbl.select_dtypes(exclude=["number"])
 
-        # Print all Attack Categories
-        all_cat = []
-        for i in y_cat:
+        # Creating a list df_num of column names for the numeric attributes
+        df_num = df_nlbl.select_dtypes(include=["number"]).columns.tolist()
+
+        # All predicted function categories
+        all_cat = []                                                #['activating', 'repressing']
+        for i in df_lbl:
             if i not in all_cat:
-                # print(i)
                 all_cat.append(i)
 
+        # Normalized the df_num
         data_array = df_to_normalized_ndarray(df_num, df)
-        encoded_data_cat = categorical_data_to_numerical_encoding(df_cat)
 
-        # 6--> Concatenating encoded categorical data with numerical data array
+        # Encode the df_cat
+        encoded_data_cat = categorical_data_to_numerical_encoding(df_cat)
 
         # Concatenate encoded categorical data with numerical data array
         concatenated_data = np.concatenate((encoded_data_cat, data_array), axis=1)
-        # Print the shape of the concatenated data
-        print("Shape of concatenated data:", concatenated_data.shape)
 
-        # Print the first row of the concatenated data
-        print("First row of concatenated data:", concatenated_data[0])
-
+        # Result preparation
         result_data.append(concatenated_data)
-        result_data.append(y_cat)
+        result_data.append(df_lbl)
         result_data.append(all_cat)
         preprocessed_data.append(result_data)
 
-    with open("preprocessedData.txt", "w") as output:
+        # Writing results in a file
+        with open('CCA_preprocessing.txt', 'w') as saveFile:
+            saveFile.write("--------Successful Run--------")
+            saveFile.write("\n")
+            saveFile.write("--------Dataframe columns--------")
+            saveFile.write("\n")
+            saveFile.write(str(df.columns.values))
+            saveFile.write("\n")
+            saveFile.write("--------Dataframe--------")
+            saveFile.write("\n")
+            saveFile.write(str(df))
+            saveFile.write("\n")
+            saveFile.write("--------Preprocessed data shape--------")
+            saveFile.write("\n")
+            saveFile.write(str(concatenated_data.shape))
+            saveFile.write("\n")
+
+    with open("CCA_preprocessing.txt", "a") as output:
         for row in preprocessed_data:
+            output.write("--------Preprocessed data--------")
+            output.write('\n')
             s = " ".join(map(str, row))
             output.write(s + '\n')
 
