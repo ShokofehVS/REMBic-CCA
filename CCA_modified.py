@@ -262,7 +262,7 @@ def calc_f1_binary_classification(results, true_labels):
 
 def format_results_for_eval(biclustering_test, sample_size):
     # Format the results so that we have list with a category for each row. The different bicluster mark the
-    # different category's. This is necessary to calcluate the metrics with sklearn.
+    # different category's. This is necessary to calculate the metrics with sklearn.
     biclusters_as_dict = _biclustering_to_dict(biclustering_test)
 
     label_pred = [0 for i in range(sample_size)]
@@ -380,40 +380,26 @@ def calculate_eval_with_reference_bicl(pred_bicluster, true_bicluster, true_bicl
     return prelic_rel, prelic_rec, ce, rnia, prelic_rel_bin, prelic_rec_bin, ce_bin, rnia_bin
 
 def update_results_dict_for_visualization(results_dict, metrics_list, msr_tresh, runtime_av, numb_class_data_sum,
-                                          sample_size):
-    results_dict["msr_thr"].append(msr_tresh)
-    results_dict["purity"].append(metrics_list[0])
+                                          sample_size, number_of_runs):
     results_dict["rand_index"].append(metrics_list[1])
-    results_dict["rand_index_adj"].append(metrics_list[2])
-    results_dict["V-measure"].append(metrics_list[3])
     results_dict["F-measure"].append(metrics_list[4])
     results_dict["Precision"].append(metrics_list[5])
     results_dict["Recall"].append(metrics_list[6])
     results_dict["Accuracy"].append(metrics_list[7])
-    results_dict["relevance_match_score"].append(metrics_list[8])
-    results_dict["recovery_match_score"].append(metrics_list[9])
-    results_dict["clustering_error"].append(metrics_list[10])
-    results_dict["relative_non_intersecting_area"].append(metrics_list[11])
     results_dict["runtime"].append(runtime_av)
-    results_dict["coverage"].append(numb_class_data_sum / sample_size)
+    results_dict["coverage"].append((numb_class_data_sum / sample_size))
+    results_dict["number_of_runs"].append(number_of_runs)
 
 def initialize_results_dict():
     return {
-        "msr_thr": [],
-        "purity": [],
         "rand_index": [],
-        "rand_index_adj": [],
-        "V-measure": [],
         "F-measure": [],
         "Precision": [],
         "Recall": [],
         "Accuracy": [],
-        "relevance_match_score": [],
-        "recovery_match_score": [],
-        "clustering_error": [],
-        "relative_non_intersecting_area": [],
         "runtime": [],
         "coverage": [],
+        "number_of_runs": [],
     }
 
 def main(sample_size=None):
@@ -427,7 +413,7 @@ def main(sample_size=None):
     runtime_av, numb_class_data_sum = 0, 0
 
     number_of_biclusters, data_min_col, multiple_node_deletion_tresh, msr_thresh, number_of_runs = 200, 200, 1.2,\
-        "default", 1
+        "default", 10
 
     # Preprocess EpiRego dataset
     data = preprocessing.preprocessing()
@@ -512,46 +498,19 @@ def main(sample_size=None):
         bin_rnia_av += rnia_bin
         numb_class_data_sum += number_of_classified_data
 
+        update_results_dict_for_visualization(results_dict_for_visualization_bin, [
+            bin_purity_av, rand_ind_bin, bin_rand_ind_adj_av, bin_v_measure_av, bin_f1, bin_prec,
+            bin_rec, bin_acc, bin_prelic_rel_av, bin_prelic_rec_av, bin_ce_av, bin_rnia_av], msr_thresh, runtime_av,
+                                              number_of_classified_data, sample_size, j)
+        df_bin = pd.DataFrame(results_dict_for_visualization_bin)
+        df_bin.to_csv(f"Data/Results_for_visualization_binary.csv", index=False)
 
-    # Average based on number of runs
-    avg_divide = lambda x: x / number_of_runs
-    mult_purity_av, bin_purity_av = avg_divide(mult_purity_av), avg_divide(bin_purity_av)
-    mult_rand_ind_av, mult_rand_ind_adj_av, mult_v_measure_av, mult_prelic_rel_av, mult_prelic_rec_av, mult_ce_av, \
-        mult_rnia_av, mult_prec_av, mult_rec_av, mult_f1_av, mult_acc_av = map(avg_divide,
-                                                                               [mult_rand_ind_av, mult_rand_ind_adj_av,
-                                                                                mult_v_measure_av, mult_prelic_rel_av,
-                                                                                mult_prelic_rec_av, mult_ce_av,
-                                                                                mult_rnia_av, mult_prec_av, mult_rec_av,
-                                                                                mult_f1_av, mult_acc_av])
-
-    bin_rand_ind_av, bin_rand_ind_adj_av, bin_v_measure_av, bin_prelic_rel_av, bin_prelic_rec_av, bin_ce_av, \
-        bin_rnia_av, bin_prec_av, bin_rec_av, bin_f1_av, bin_acc_av = map(avg_divide,
-                                                                          [bin_rand_ind_av, bin_rand_ind_adj_av,
-                                                                           bin_v_measure_av, bin_prelic_rel_av,
-                                                                           bin_prelic_rec_av, bin_ce_av, bin_rnia_av,
-                                                                           bin_prec_av, bin_rec_av, bin_f1_av,
-                                                                           bin_acc_av])
     runtime_av /= number_of_runs
     numb_class_data_sum /= number_of_runs
 
     # Write the result on file
     write_results_in_file(number_of_runs, sample_size, msr_thr, multiple_node_deletion_tresh, data_min_col,
                           number_of_biclusters, biclustering)
-
-    # for visualization purposes
-    update_results_dict_for_visualization(results_dict_for_visualization_mult, [
-        mult_purity_av, mult_rand_ind_av, mult_rand_ind_adj_av, mult_v_measure_av, mult_f1_av, mult_prec_av,
-        mult_rec_av, mult_acc_av, mult_prelic_rel_av, mult_prelic_rec_av, mult_ce_av, mult_rnia_av], msr_thresh,
-                                          runtime_av, numb_class_data_sum, sample_size)
-    update_results_dict_for_visualization(results_dict_for_visualization_bin, [
-        bin_purity_av, bin_rand_ind_av, bin_rand_ind_adj_av, bin_v_measure_av, bin_f1_av, bin_prec_av,
-        bin_rec_av, bin_acc_av, bin_prelic_rel_av, bin_prelic_rec_av, bin_ce_av, bin_rnia_av], msr_thresh, runtime_av,
-                                          numb_class_data_sum, sample_size)
-    df_mult = pd.DataFrame(results_dict_for_visualization_mult)
-    df_bin = pd.DataFrame(results_dict_for_visualization_bin)
-
-    df_mult.to_csv(f"Results_for_visualization_multi", index=False)
-    df_bin.to_csv(f"Results_for_visualization_binary", index=False)
 
 
 if __name__ == '__main__':
