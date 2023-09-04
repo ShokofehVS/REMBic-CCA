@@ -54,7 +54,7 @@ class ChengChurchAlgorithm(BaseBiclusteringAlgorithm):
         Minimum number of dataset columns required to perform multiple column deletion.
     """
 
-    def __init__(self, num_biclusters=10, msr_threshold='estimate', multiple_node_deletion_threshold=1.2, data_min_cols=100):
+    def __init__(self, num_biclusters=100, msr_threshold='estimate', multiple_node_deletion_threshold=1.2, data_min_cols=100):
         self.num_biclusters = num_biclusters
         self.msr_threshold = msr_threshold
         self.multiple_node_deletion_threshold = multiple_node_deletion_threshold
